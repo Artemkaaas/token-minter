@@ -1,0 +1,4 @@
+{
+  "tokens_amount": 1000,
+  "location_pool_transactions_genesis": "https://github.com/hyperledger/indy-sdk/blob/master/cli/docker_pool_transactions_genesis"
+}
