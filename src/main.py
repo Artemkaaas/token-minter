@@ -29,7 +29,7 @@ class MainWindow(tk.Tk):
 
     def init_steps(self):
         self.steps = {
-            'BUILD': [OpenWalletPage, SelectDidPage, BuildTransactionPage, SelectOutputFilePage, StartPage],
+            'BUILD': [OpenWalletPage, BuildTransactionPage, SelectOutputFilePage, StartPage],
             'SIGN': [OpenWalletPage, SelectDidPage, SignTransactionFilePage, SelectOutputFilePage, StartPage],
             'SEND': [OpenPoolPage, SendTransactionPage, StartPage],
         }
@@ -165,8 +165,10 @@ class SelectOutputFilePage(tk.Frame):
 
     def _on_click(self, container, controller):
         try:
-            file = open(self.output_filename.get(), 'w+')
-            file.write(container.master.context['transaction'])
+            with open(self.output_filename.get(), 'w+') as file:
+                file.write(container.master.context['transaction'])
+
+            messagebox.showinfo("Success", "Transaction has been saved")
         except Exception as e:
             return messagebox.showerror("Error", e)
 
@@ -193,7 +195,7 @@ class BuildTransactionPage(tk.Frame):
         try:
             load_plugin()
             (container.master.context['transaction'], _) = \
-                build_mint_transaction(container.master.context['wallet_handle'], container.master.context['did'],
+                build_mint_transaction(container.master.context['wallet_handle'],
                                        self.payment_address.get(), int(self.amount.get()))
             close_wallet(container.master.context['wallet_handle'])
         except Exception as e:
@@ -246,6 +248,8 @@ class SendTransactionPage(tk.Frame):
 
             send_transaction(container.master.context['pool_handle'], self.transaction)
             close_pool(container.master.context['pool_handle'])
+
+            messagebox.showinfo("Success", "Transaction has been sent")
         except Exception as e:
             return messagebox.showerror("Error", e)
 

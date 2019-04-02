@@ -79,7 +79,7 @@ def send_transaction(pool_handle: int, transaction: str):
         raise Exception(err.message)
 
 
-def build_mint_transaction(wallet_handle: int, did: str, payment_address: str, amount: int):
+def build_mint_transaction(wallet_handle: int, payment_address: str, amount: int):
     outputs = [{
         'recipient':
             payment_address if payment_address.startswith(PAYMENT_PREFIX) else PAYMENT_PREFIX + payment_address,
@@ -87,7 +87,7 @@ def build_mint_transaction(wallet_handle: int, did: str, payment_address: str, a
     }]
 
     try:
-        return run_coroutine(payment.build_mint_req(wallet_handle, did, json.dumps(outputs), None))
+        return run_coroutine(payment.build_mint_req(wallet_handle, None, json.dumps(outputs), None))
     except IndyError as err:
         if err.error_code == ErrorCode.CommonInvalidStructure:
             raise Exception('Invalid payment address has been provided')
