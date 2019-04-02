@@ -1,17 +1,32 @@
+import json
 import os
 import platform
+import urllib.request
 
 import asyncio
 from ctypes import cdll
+
+from src.constants import *
 
 PROTOCOL_VERSION = 2
 
 EXTENSION = {"darwin": ".dylib", "linux": ".so", "win32": ".dll", 'windows': '.dll'}
 INITIAL_DIR = os.path.abspath('..')
-PAYMENT_LIBRARY = 'libsovtoken'
-PAYMENT_PREFIX = 'pay:sov:'
 
 loop = asyncio.get_event_loop()
+
+
+def load_config():
+    return json.loads(read_remote_file(CONFIG_URL))
+
+
+def read_remote_file(url: str) -> str:
+    return urllib.request.urlopen(url).read().decode()
+
+
+def download_remote_file(url: str) -> str:
+    path, _ = urllib.request.urlretrieve(url)
+    return path
 
 
 def file_ext():

@@ -3,8 +3,8 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
 
-from indy_helpers import *
-from utils import INITIAL_DIR, load_plugin
+from src.indy_helpers import *
+from src.utils import INITIAL_DIR, load_plugin, load_config
 
 LARGE_FONT = ('Verdana', 12)
 MEDIUM_FONT = ('Verdana', 10)
@@ -21,18 +21,11 @@ class MainWindow(tk.Tk):
 
         container = tk.Frame(self)
         container.pack(side='top', fill='both', expand=True)
-        container.grid_columnconfigure(0, weight=1)  # make the cell in grid cover the entire window
+        container.grid_columnconfigure(0, weight=1)
 
+        self.config = load_config()
         self.steps = {}
-        self.context = {}
-        self._show_frame(container, StartPage)  # let the first page is StartPage
-
-    def init_steps(self):
-        self.steps = {
-            'BUILD': [OpenWalletPage, BuildTransactionPage, SelectOutputFilePage, StartPage],
-            'SIGN': [OpenWalletPage, SelectDidPage, SignTransactionFilePage, SelectOutputFilePage, StartPage],
-            'SEND': [OpenPoolPage, SendTransactionPage, StartPage],
-        }
+        self._show_frame(container, StartPage)
 
     def step(self, container):
         self._show_frame(container, self.action_steps.pop(0))
@@ -51,7 +44,7 @@ class StartPage(tk.Frame):
     def __init__(self, container, controller):
         tk.Frame.__init__(self, container)
 
-        controller.init_steps()
+        controller.context = {}
 
         tk.Label(self, text='What do you want?', cnf=TOP_LABEL).pack()
 
@@ -65,8 +58,15 @@ class StartPage(tk.Frame):
                   command=lambda: self._on_click(container, controller, 'SEND')).pack(pady=20)
 
     def _on_click(self, container, controller, action):
-        controller.action_steps = controller.steps[action]
+        controller.action_steps = self.steps()[action]
         controller.step(container)
+
+    def steps(self):
+        return {
+            'BUILD': [OpenWalletPage, BuildTransactionPage, SelectOutputFilePage, StartPage],
+            'SIGN': [OpenWalletPage, SelectDidPage, SignTransactionFilePage, SelectOutputFilePage, StartPage],
+            'SEND': [SendTransactionPage, StartPage],
+        }
 
 
 class OpenWalletPage(tk.Frame):
@@ -184,9 +184,10 @@ class BuildTransactionPage(tk.Frame):
         self.payment_address = tk.Entry(self)
         self.payment_address.pack()
 
+        self.amount = tk.IntVar(value=container.master.config['tokens_amount'])
+
         tk.Label(self, text='Amount', font=MEDIUM_FONT).pack(pady=(20, 2))
-        self.amount = tk.Entry(self)
-        self.amount.pack()
+        tk.Entry(self, textvariable=self.amount).pack()
 
         tk.Button(self, text='Build', font=MEDIUM_FONT,
                   command=lambda: self._on_click(container, controller)).pack(pady=20)
@@ -196,31 +197,10 @@ class BuildTransactionPage(tk.Frame):
             load_plugin()
             (container.master.context['transaction'], _) = \
                 build_mint_transaction(container.master.context['wallet_handle'],
-                                       self.payment_address.get(), int(self.amount.get()))
+                                       self.payment_address.get(), self.amount.get())
             close_wallet(container.master.context['wallet_handle'])
         except Exception as e:
             return messagebox.showerror("Cannot build Transaction", e)
-
-        controller.step(container)
-
-
-class OpenPoolPage(tk.Frame):
-    def __init__(self, container, controller):
-        tk.Frame.__init__(self, container)
-        tk.Label(self, text='Open Pool', cnf=TOP_LABEL).pack()
-
-        tk.Label(self, text='Name', font=MEDIUM_FONT).pack(pady=(20, 2))
-        self.name = tk.Entry(self)
-        self.name.pack()
-
-        tk.Button(self, text='Open', font=MEDIUM_FONT,
-                  command=lambda: self._on_click(container, controller)).pack(pady=20)
-
-    def _on_click(self, container, controller):
-        try:
-            container.master.context['pool_handle'] = open_pool(self.name.get())
-        except Exception as e:
-            return messagebox.showerror("Cannot open Pool", e)
 
         controller.step(container)
 
@@ -243,10 +223,14 @@ class SendTransactionPage(tk.Frame):
 
     def _on_click(self, container, controller):
         try:
+            if not 'pool_handle' in container.master.context:
+                container.master.context['pool_handle'] = open_pool(container.master.config)
+
             with open(self.input_filename.get(), "r") as input_filename:
                 self.transaction = input_filename.read()
 
             send_transaction(container.master.context['pool_handle'], self.transaction)
+
             close_pool(container.master.context['pool_handle'])
 
             messagebox.showinfo("Success", "Transaction has been sent")

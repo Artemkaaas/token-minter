@@ -1,9 +1,11 @@
 import json
+import os
 
 from indy.error import IndyError, ErrorCode
 from indy import wallet, did, ledger, payment, pool
 
-from utils import run_coroutine, PAYMENT_PREFIX
+from src.utils import run_coroutine, download_remote_file
+from src.constants import *
 
 
 def open_wallet(name: str, key: str) -> int:
@@ -28,10 +30,9 @@ def close_wallet(wallet_handle):
         raise Exception(err.message)
 
 
-def open_pool(name: str) -> int:
+def open_pool(config: dict) -> int:
     try:
-        run_coroutine(pool.set_protocol_version(2))
-        return run_coroutine(pool.open_pool_ledger(name, None))
+        return run_coroutine(create_and_open_pool(config))
     except IndyError as err:
         if err.error_code == ErrorCode.PoolLedgerNotCreatedError:
             raise Exception('Pool not found')
@@ -42,11 +43,30 @@ def open_pool(name: str) -> int:
         raise Exception(err.message)
 
 
+async def create_and_open_pool(config: dict) -> int:
+    await pool.set_protocol_version(2)
+    genesis_txn = download_remote_file(config['location_pool_transactions_genesis'])
+
+    try:
+        await pool.create_pool_ledger_config(POOL_NAME, json.dumps({'genesis_txn': genesis_txn}))
+    except IndyError as err:
+        if err.error_code != ErrorCode.PoolLedgerConfigAlreadyExistsError:
+            raise err
+
+    os.remove(genesis_txn)
+    return await pool.open_pool_ledger(POOL_NAME, None)
+
+
 def close_pool(pool_handle):
     try:
-        run_coroutine(pool.close_pool_ledger(pool_handle))
+        run_coroutine(close_and_delete_pool(pool_handle))
     except IndyError as err:
         raise Exception(err.message)
+
+
+async def close_and_delete_pool(pool_handle):
+    await pool.close_pool_ledger(pool_handle)
+    await pool.delete_pool_ledger_config(POOL_NAME)
 
 
 def get_stored_dids(wallet_handle) -> list:
