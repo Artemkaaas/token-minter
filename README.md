@@ -1,1 +1,1 @@
-token-minter
+# Simple token minter based on Indy-Sdk and Libsovtoken
