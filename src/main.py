@@ -3,8 +3,8 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
 
-from src.indy_helpers import *
-from src.utils import INITIAL_DIR, load_plugin
+from indy_helpers import *
+from utils import INITIAL_DIR, load_plugin
 
 LARGE_FONT = ('Verdana', 12)
 MEDIUM_FONT = ('Verdana', 10)

@@ -3,7 +3,7 @@ import json
 from indy.error import IndyError, ErrorCode
 from indy import wallet, did, ledger, payment, pool
 
-from src.utils import run_coroutine, PAYMENT_PREFIX
+from utils import run_coroutine, PAYMENT_PREFIX
 
 
 def open_wallet(name: str, key: str) -> int:
