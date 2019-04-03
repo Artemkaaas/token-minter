@@ -24,8 +24,11 @@ class MainWindow(tk.Tk):
         container.grid_columnconfigure(0, weight=1)
 
         self.config = load_config()
+        self.context = {}
         self.steps = {}
         self._show_frame(container, StartPage)
+
+        self.protocol("WM_DELETE_WINDOW", self._clean())
 
     def step(self, container):
         self._show_frame(container, self.action_steps.pop(0))
@@ -39,12 +42,14 @@ class MainWindow(tk.Tk):
         frame = self._build_frame(container, page)
         frame.tkraise()
 
+    def _clean(self):
+        if self.context.get('pool_handle'):
+            close_pool(self.context.get('pool_handle'))
+
 
 class StartPage(tk.Frame):
     def __init__(self, container, controller):
         tk.Frame.__init__(self, container)
-
-        controller.context = {}
 
         tk.Label(self, text='What do you want?', cnf=TOP_LABEL).pack()
 
@@ -140,7 +145,7 @@ class SignTransactionFilePage(tk.Frame):
                 container.master.context['transaction'] = sign_transaction(container.master.context['wallet_handle'],
                                                                            container.master.context['did'],
                                                                            transaction)
-            close_wallet(container.master.context['wallet_handle'])
+                close_wallet(container.master.context['wallet_handle'])
         except Exception as e:
             return messagebox.showerror("Error", e)
 
@@ -208,7 +213,7 @@ class BuildTransactionPage(tk.Frame):
 class SendTransactionPage(tk.Frame):
     def __init__(self, container, controller):
         tk.Frame.__init__(self, container)
-        tk.Label(self, text='Send Transaction to Ledger', cnf=TOP_LABEL).pack()
+        tk.Label(self, text='Send Transaction', cnf=TOP_LABEL).pack()
 
         self.input_filename = tk.StringVar()
         tk.Button(self, text='Select Transaction file', font=MEDIUM_FONT,
@@ -223,15 +228,13 @@ class SendTransactionPage(tk.Frame):
 
     def _on_click(self, container, controller):
         try:
-            if not 'pool_handle' in container.master.context:
+            if not container.master.context.get('pool_handle'):
                 container.master.context['pool_handle'] = open_pool(container.master.config)
 
             with open(self.input_filename.get(), "r") as input_filename:
                 self.transaction = input_filename.read()
 
             send_transaction(container.master.context['pool_handle'], self.transaction)
-
-            close_pool(container.master.context['pool_handle'])
 
             messagebox.showinfo("Success", "Transaction has been sent")
         except Exception as e:

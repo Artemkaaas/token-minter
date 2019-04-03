@@ -96,6 +96,8 @@ def send_transaction(pool_handle: int, transaction: str):
     except IndyError as err:
         if err.error_code == ErrorCode.CommonInvalidStructure:
             raise Exception('Invalid Transaction')
+        if err.error_code == ErrorCode.PoolLedgerTimeout:
+            raise Exception('Cannot get response from Ledger')
         raise Exception(err.message)
 
 
