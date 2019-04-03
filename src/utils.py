@@ -1,17 +1,17 @@
 import json
-import os
 import platform
 import urllib.request
 
 import asyncio
 from ctypes import cdll
+from pathlib import Path
 
 from src.constants import *
 
 PROTOCOL_VERSION = 2
 
 EXTENSION = {"darwin": ".dylib", "linux": ".so", "win32": ".dll", 'windows': '.dll'}
-INITIAL_DIR = os.path.abspath('..')
+INITIAL_DIR = Path.home()
 
 loop = asyncio.get_event_loop()
 
