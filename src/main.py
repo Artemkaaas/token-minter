@@ -2,15 +2,18 @@ import tkinter as tk
 
 from tkinter import filedialog
 from tkinter import messagebox
+from tkinter.font import BOLD
 
 from src.indy_helpers import *
 from src.utils import INITIAL_DIR, load_plugin, load_config
 
 LARGE_FONT = ('Verdana', 12)
 MEDIUM_FONT = ('Verdana', 10)
-SMALL_FONT = ('Verdana', 10)
+ICON_FONT = ('Symbol', 12, BOLD)
 
 TOP_LABEL = {'font': LARGE_FONT, 'pady': 20}
+BACK_BUTTON = {'pady': 20, 'padx': 5, 'side': tk.LEFT, 'anchor': 'e', 'expand': 1}
+STEP_BUTTON = {'pady': 20, 'padx': 5, 'side': tk.LEFT, 'anchor': 'w', 'expand': 1}
 
 
 class MainWindow(tk.Tk):
@@ -31,7 +34,12 @@ class MainWindow(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._clean())
 
     def step(self, container):
-        self._show_frame(container, self.action_steps.pop(0))
+        self.page += 1
+        self._show_frame(container, self.action_steps[self.page])
+
+    def step_back(self, container):
+        self.page -= 1
+        self._show_frame(container, self.action_steps[self.page])
 
     def _build_frame(self, container, page):
         frame = page(container, self)
@@ -51,16 +59,24 @@ class StartPage(tk.Frame):
     def __init__(self, container, controller):
         tk.Frame.__init__(self, container)
 
+        controller.page = -1
+
+        tk.Button(self, text='?', font=ICON_FONT, borderwidth=0,
+                  command=lambda: self._on_help_click()).pack(anchor="e")
+
         tk.Label(self, text='What do you want?', cnf=TOP_LABEL).pack()
 
         tk.Button(self, text='Build Transaction', font=MEDIUM_FONT,
-                  command=lambda: self._on_click(container, controller, 'BUILD')).pack(pady=20)
+                  command=lambda: self._on_click(container, controller, 'BUILD')).pack(pady=10)
 
         tk.Button(self, text='Sign Transaction', font=MEDIUM_FONT,
-                  command=lambda: self._on_click(container, controller, 'SIGN')).pack(pady=20)
+                  command=lambda: self._on_click(container, controller, 'SIGN')).pack(pady=10)
 
         tk.Button(self, text='Send Transaction', font=MEDIUM_FONT,
-                  command=lambda: self._on_click(container, controller, 'SEND')).pack(pady=20)
+                  command=lambda: self._on_click(container, controller, 'SEND')).pack(pady=10)
+
+    def _on_help_click(self):
+        messagebox.showinfo("Help", HELP_TEXT)
 
     def _on_click(self, container, controller, action):
         controller.action_steps = self.steps()[action]
@@ -87,8 +103,11 @@ class OpenWalletPage(tk.Frame):
         self.key = tk.Entry(self)
         self.key.pack()
 
+        tk.Button(self, text='Back', font=MEDIUM_FONT,
+                  command=lambda: controller.step_back(container)).pack(BACK_BUTTON)
+
         tk.Button(self, text='Open', font=MEDIUM_FONT,
-                  command=lambda: self._on_click(container, controller)).pack(pady=20)
+                  command=lambda: self._on_click(container, controller)).pack(STEP_BUTTON)
 
     def _on_click(self, container, controller):
         try:
@@ -185,12 +204,11 @@ class BuildTransactionPage(tk.Frame):
         tk.Frame.__init__(self, container)
         tk.Label(self, text='Build Transaction', cnf=TOP_LABEL).pack()
 
+        self.payment_address = tk.StringVar(value=container.master.config['payment_address'])
         tk.Label(self, text='Payment Address', font=MEDIUM_FONT).pack(pady=(20, 2))
-        self.payment_address = tk.Entry(self)
-        self.payment_address.pack()
+        tk.Entry(self, textvariable=self.payment_address).pack()
 
         self.amount = tk.IntVar(value=container.master.config['tokens_amount'])
-
         tk.Label(self, text='Amount', font=MEDIUM_FONT).pack(pady=(20, 2))
         tk.Entry(self, textvariable=self.amount).pack()
 
@@ -220,8 +238,11 @@ class SendTransactionPage(tk.Frame):
                   command=lambda: self._select_input_file()).pack(pady=(20, 5))
         tk.Message(self, textvariable=self.input_filename, font=MEDIUM_FONT, width=260).pack()
 
+        tk.Button(self, text='Back', font=MEDIUM_FONT,
+                  command=lambda: controller.step_back(container)).pack(BACK_BUTTON)
+
         tk.Button(self, text='Send', font=MEDIUM_FONT,
-                  command=lambda: self._on_click(container, controller)).pack(pady=30)
+                  command=lambda: self._on_click(container, controller)).pack(STEP_BUTTON)
 
     def _select_input_file(self):
         self.input_filename.set(filedialog.askopenfilename(initialdir=INITIAL_DIR, title="Select Transaction file"))
