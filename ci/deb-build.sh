@@ -1,3 +1,15 @@
+#!/bin/bash
+
+set -e
+set -x
+
+if [ "$1" = "--help" ] ; then
+  echo "Usage: <version>"
+  return
+fi
+
+version="$1"
+
 pyinstaller --onefile \
     --name token-minter \
     --clean \
@@ -10,6 +22,7 @@ fpm --input-type "dir" \
     --name token-minter \
     --description "This is the simple GUI utility for minting tokens based on Indy-SDL and Libsovtoken libraries" \
     --license "MIT/Apache-2.0" \
+    --version $version \
     --depends "libindy = 1.8.2" \
     --depends "libsovtoken = 0.9.7" \
     --depends "python3-tk" \

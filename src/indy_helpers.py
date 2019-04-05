@@ -27,6 +27,8 @@ def close_wallet(wallet_handle):
     try:
         run_coroutine(wallet.close_wallet(wallet_handle))
     except IndyError as err:
+        if err.error_code == ErrorCode.WalletInvalidHandle:
+            return
         raise Exception(err.message)
 
 

@@ -14,6 +14,9 @@ ICON_FONT = ('Symbol', 12, BOLD)
 TOP_LABEL = {'font': LARGE_FONT, 'pady': 20}
 BACK_BUTTON = {'pady': 20, 'padx': 5, 'side': tk.LEFT, 'anchor': 'e', 'expand': 1}
 STEP_BUTTON = {'pady': 20, 'padx': 5, 'side': tk.LEFT, 'anchor': 'w', 'expand': 1}
+ENTRY_LABEL = {'pady': (20, 2)}
+FILE_BUTTON = {'pady': (20, 0)}
+FILE_LABEL = {'pady': (5, 0)}
 
 
 class MainWindow(tk.Tk):
@@ -31,8 +34,6 @@ class MainWindow(tk.Tk):
         self.steps = {}
         self._show_frame(container, StartPage)
 
-        self.protocol("WM_DELETE_WINDOW", self._clean())
-
     def step(self, container):
         self.page += 1
         self._show_frame(container, self.action_steps[self.page])
@@ -49,10 +50,6 @@ class MainWindow(tk.Tk):
     def _show_frame(self, container, page):
         frame = self._build_frame(container, page)
         frame.tkraise()
-
-    def _clean(self):
-        if self.context.get('pool_handle'):
-            close_pool(self.context.get('pool_handle'))
 
 
 class StartPage(tk.Frame):
@@ -95,13 +92,13 @@ class OpenWalletPage(tk.Frame):
         tk.Frame.__init__(self, container)
         tk.Label(self, text='Open Wallet', cnf=TOP_LABEL).pack()
 
-        tk.Label(self, text='Name', font=MEDIUM_FONT).pack(pady=(20, 2))
-        self.name = tk.Entry(self)
-        self.name.pack()
+        self.name = tk.StringVar(value=container.master.context.get('wallet_name'))
+        tk.Label(self, text='Name', font=MEDIUM_FONT).pack(ENTRY_LABEL)
+        tk.Entry(self, textvariable=self.name).pack()
 
-        tk.Label(self, text='Key', font=MEDIUM_FONT).pack(pady=(20, 2))
-        self.key = tk.Entry(self)
-        self.key.pack()
+        self.key = tk.StringVar()
+        tk.Label(self, text='Key', font=MEDIUM_FONT).pack(ENTRY_LABEL)
+        tk.Entry(self, textvariable=self.key).pack()
 
         tk.Button(self, text='Back', font=MEDIUM_FONT,
                   command=lambda: controller.step_back(container)).pack(BACK_BUTTON)
@@ -111,6 +108,9 @@ class OpenWalletPage(tk.Frame):
 
     def _on_click(self, container, controller):
         try:
+            if container.master.context.get('wallet_handle'):
+                close_wallet(container.master.context['wallet_handle'])
+            container.master.context['wallet_name'] = self.name.get()
             container.master.context['wallet_handle'] = open_wallet(self.name.get(), self.key.get())
         except Exception as e:
             return messagebox.showerror("Cannot open Wallet", e)
@@ -123,14 +123,19 @@ class SelectDidPage(tk.Frame):
         tk.Frame.__init__(self, container)
         tk.Label(self, text='Select DID', cnf=TOP_LABEL).pack()
 
-        self.listbox = tk.Listbox(self, height=8, width=24, font=MEDIUM_FONT)
+        self.did = tk.StringVar(value=container.master.context.get('did'))
+        self.listbox = tk.Listbox(self, height=8, width=24, font=MEDIUM_FONT, listvariable=self.did)
         self.listbox.pack()
 
-        [self.listbox.insert(tk.END, did_info['did'])
-         for did_info in get_stored_dids(container.master.context['wallet_handle'])]
+        for did_info in get_stored_dids(container.master.context['wallet_handle']):
+            if not did_info['did'] in self.listbox.get(0, "end"):
+                self.listbox.insert(tk.END, did_info['did'])
+
+        tk.Button(self, text='Back', font=MEDIUM_FONT,
+                  command=lambda: controller.step_back(container)).pack(BACK_BUTTON)
 
         tk.Button(self, text='Select', font=MEDIUM_FONT,
-                  command=lambda: self._on_click(container, controller)).pack(pady=20)
+                  command=lambda: self._on_click(container, controller)).pack(STEP_BUTTON)
 
     def _on_click(self, container, controller):
         if not self.listbox.get(tk.ACTIVE):
@@ -147,11 +152,14 @@ class SignTransactionFilePage(tk.Frame):
 
         self.input_filename = tk.StringVar()
         tk.Button(self, text='Select Transaction file', font=MEDIUM_FONT,
-                  command=lambda: self._select_input_file()).pack(pady=(20, 5))
-        tk.Message(self, textvariable=self.input_filename, font=MEDIUM_FONT, width=260).pack()
+                  command=lambda: self._select_input_file()).pack(FILE_BUTTON)
+        tk.Message(self, textvariable=self.input_filename, font=MEDIUM_FONT, width=260).pack(FILE_LABEL)
+
+        tk.Button(self, text='Back', font=MEDIUM_FONT,
+                  command=lambda: controller.step_back(container)).pack(BACK_BUTTON)
 
         tk.Button(self, text='Sign', font=MEDIUM_FONT,
-                  command=lambda: self._on_click(container, controller)).pack(pady=30)
+                  command=lambda: self._on_click(container, controller)).pack(STEP_BUTTON)
 
     def _select_input_file(self):
         self.input_filename.set(
@@ -164,7 +172,6 @@ class SignTransactionFilePage(tk.Frame):
                 container.master.context['transaction'] = sign_transaction(container.master.context['wallet_handle'],
                                                                            container.master.context['did'],
                                                                            transaction)
-                close_wallet(container.master.context['wallet_handle'])
         except Exception as e:
             return messagebox.showerror("Error", e)
 
@@ -178,11 +185,14 @@ class SelectOutputFilePage(tk.Frame):
 
         self.output_filename = tk.StringVar()
         tk.Button(self, text='Select Output file', font=MEDIUM_FONT,
-                  command=lambda: self._select_output_file()).pack(pady=(20, 5))
-        tk.Message(self, textvariable=self.output_filename, font=MEDIUM_FONT, width=260).pack()
+                  command=lambda: self._select_output_file()).pack(FILE_BUTTON)
+        tk.Message(self, textvariable=self.output_filename, font=MEDIUM_FONT, width=260).pack(FILE_LABEL)
+
+        tk.Button(self, text='Back', font=MEDIUM_FONT,
+                  command=lambda: controller.step_back(container)).pack(BACK_BUTTON)
 
         tk.Button(self, text='Save', font=MEDIUM_FONT,
-                  command=lambda: self._on_click(container, controller)).pack(pady=30)
+                  command=lambda: self._on_click(container, controller)).pack(STEP_BUTTON)
 
     def _select_output_file(self):
         self.output_filename.set(filedialog.asksaveasfilename(initialdir=INITIAL_DIR, title="Select Output File"))
@@ -205,15 +215,18 @@ class BuildTransactionPage(tk.Frame):
         tk.Label(self, text='Build Transaction', cnf=TOP_LABEL).pack()
 
         self.payment_address = tk.StringVar(value=container.master.config['payment_address'])
-        tk.Label(self, text='Payment Address', font=MEDIUM_FONT).pack(pady=(20, 2))
+        tk.Label(self, text='Payment Address', font=MEDIUM_FONT).pack(ENTRY_LABEL)
         tk.Entry(self, textvariable=self.payment_address).pack()
 
         self.amount = tk.IntVar(value=container.master.config['tokens_amount'])
-        tk.Label(self, text='Amount', font=MEDIUM_FONT).pack(pady=(20, 2))
+        tk.Label(self, text='Amount', font=MEDIUM_FONT).pack(ENTRY_LABEL)
         tk.Entry(self, textvariable=self.amount).pack()
 
+        tk.Button(self, text='Back', font=MEDIUM_FONT,
+                  command=lambda: controller.step_back(container)).pack(BACK_BUTTON)
+
         tk.Button(self, text='Build', font=MEDIUM_FONT,
-                  command=lambda: self._on_click(container, controller)).pack(pady=20)
+                  command=lambda: self._on_click(container, controller)).pack(STEP_BUTTON)
 
     def _on_click(self, container, controller):
         try:
@@ -221,7 +234,6 @@ class BuildTransactionPage(tk.Frame):
             (container.master.context['transaction'], _) = \
                 build_mint_transaction(container.master.context['wallet_handle'],
                                        self.payment_address.get(), self.amount.get())
-            close_wallet(container.master.context['wallet_handle'])
         except Exception as e:
             return messagebox.showerror("Cannot build Transaction", e)
 
@@ -235,8 +247,8 @@ class SendTransactionPage(tk.Frame):
 
         self.input_filename = tk.StringVar()
         tk.Button(self, text='Select Transaction file', font=MEDIUM_FONT,
-                  command=lambda: self._select_input_file()).pack(pady=(20, 5))
-        tk.Message(self, textvariable=self.input_filename, font=MEDIUM_FONT, width=260).pack()
+                  command=lambda: self._select_input_file()).pack(FILE_BUTTON)
+        tk.Message(self, textvariable=self.input_filename, font=MEDIUM_FONT, width=260).pack(FILE_LABEL)
 
         tk.Button(self, text='Back', font=MEDIUM_FONT,
                   command=lambda: controller.step_back(container)).pack(BACK_BUTTON)
@@ -257,13 +269,21 @@ class SendTransactionPage(tk.Frame):
 
             send_transaction(container.master.context['pool_handle'], self.transaction)
 
-            messagebox.showinfo("Success", "Transaction has been sent")
+            messagebox.showinfo("Success", "Transaction has been successfully sent")
         except Exception as e:
             return messagebox.showerror("Error", e)
 
         controller.step(container)
 
 
+def clean(self):
+    if self.context.get('wallet_handle'):
+        close_wallet(self.context['wallet_handle'])
+    if self.context.get('pool_handle'):
+        close_pool(self.context.get('pool_handle'))
+
+
 if __name__ == '__main__':
     app = MainWindow()
     app.mainloop()
+    clean(app)
