@@ -10,7 +10,7 @@ from src.constants import *
 
 PROTOCOL_VERSION = 2
 
-EXTENSION = {"darwin": ".dylib", "linux": ".so", "win32": ".dll", 'windows': '.dll'}
+LIBRARY = {"darwin": "libsovtoken.dylib", "linux": "libsovtoken.so", "win32": "sovtoken.dll", 'windows': 'sovtoken.dll'}
 INITIAL_DIR = Path.home()
 
 loop = asyncio.get_event_loop()
@@ -29,17 +29,17 @@ def download_remote_file(url: str) -> str:
     return path
 
 
-def file_ext():
+def library():
     your_platform = platform.system().lower()
-    return EXTENSION[your_platform] if (your_platform in EXTENSION) else '.so'
+    return LIBRARY[your_platform] if (your_platform in LIBRARY) else 'libsovtoken.so'
 
 
 def load_plugin():
     try:
-        payment_plugin = cdll.LoadLibrary(PAYMENT_LIBRARY + file_ext())
+        payment_plugin = cdll.LoadLibrary(library())
         payment_plugin.sovtoken_init()
-    except Exception:
-        raise Exception('Cannot find libsovtoken library')
+    except Exception as e:
+        raise Exception(e)
 
 
 def run_coroutine(coroutine):

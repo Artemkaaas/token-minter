@@ -1,5 +1,5 @@
 CONFIG_URL = 'https://github.com/Artemkaaas/token-minter/raw/config/config.json'
-PAYMENT_LIBRARY = 'libsovtoken'
+PAYMENT_LIBRARY = 'sovtoken'
 PAYMENT_PREFIX = 'pay:sov:'
 POOL_NAME = 'minter_pool'
 HELP_TEXT = '''
